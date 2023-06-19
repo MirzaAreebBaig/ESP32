@@ -1,0 +1,79 @@
+//---------------------------------------- Include Library.
+#include <SPI.h>
+#include <LoRa.h>
+//----------------------------------------
+
+//---------------------------------------- LoRa Pin / GPIO configuration.
+#define ss 5
+#define rst 14
+#define dio0 2
+//----------------------------------------
+
+//---------------------------------------- LoRa data transmission configuration.
+byte LocalAddress = 0x02;               //--> address of this device (Slave Address).
+byte Destination_ESP32_Master = 0x01;   //--> destination to send to Master (ESP32).
+//---------------------------------------- 
+
+//---------------------------------------- Variable declaration for Millis/Timer.
+unsigned long previousMillis_SendMSG = 0;
+const long interval_SendMSG = 1000;
+//----------------------------------------
+
+//---------------------------------------- Variable declaration for random number.
+int randomValue = 0;
+//----------------------------------------
+
+//________________________________________________________________________________ Subroutines for sending data (LoRa Ra-02).
+void sendMessage(byte Outgoing, byte Destination) {
+  LoRa.beginPacket();             //--> start packet
+  LoRa.write(Destination);        //--> add destination address
+  LoRa.write(LocalAddress);       //--> add sender address
+  LoRa.write(sizeof(Outgoing));   //--> add payload length
+  LoRa.write(Outgoing);           //--> add payload
+  LoRa.endPacket();               //--> finish packet and send it
+}
+//________________________________________________________________________________ 
+
+//________________________________________________________________________________ VOID SETUP
+void setup() {
+  // put your setup code here, to run once:
+
+  Serial.begin(115200);
+
+  //---------------------------------------- Settings and start Lora Ra-02.
+  LoRa.setPins(ss, rst, dio0);
+
+  Serial.println("Start LoRa init...");
+  if (!LoRa.begin(433E6)) {             // initialize ratio at 915 or 433 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+  Serial.println("LoRa init succeeded.");
+  //---------------------------------------- 
+
+  // Set random seed based on analog input pin
+  randomSeed(analogRead(0));
+}
+//________________________________________________________________________________ 
+
+//________________________________________________________________________________ VOID LOOP
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //---------------------------------------- Millis or Timer to send random 1-digit number to Master every 1 second.
+  unsigned long currentMillis_SendMSG = millis();
+  
+  if (currentMillis_SendMSG - previousMillis_SendMSG >= interval_SendMSG) {
+    previousMillis_SendMSG = currentMillis_SendMSG;
+
+    // Generate a random 1-digit number
+    randomValue = random(10);
+
+    // Send the random number to the Master
+    Serial.print("Sending random number to Master: ");
+    Serial.println(randomValue);
+    sendMessage(randomValue, Destination_ESP32_Master);
+  }
+  //----------------------------------------
+}
+//________________________________________________________________________________
